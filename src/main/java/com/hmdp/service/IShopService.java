@@ -13,4 +13,10 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface IShopService extends IService<Shop> {
 
+    /**
+     * 查询商户信息
+     * @param id
+     * @return
+     */
+    Object queryById(Long id);
 }
