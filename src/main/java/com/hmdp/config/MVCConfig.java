@@ -19,11 +19,11 @@ public class MVCConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new LoginIntercepter())
         .excludePathPatterns(
-                "shop-type/**",
-                "upload/**",
-                "voucher/**",
-                "shop/**",
-                "blog/hot",
+                "/shop-type/**",
+                "/upload/**",
+                "/voucher/**",
+                "/shop/**",
+                "/blog/hot",
                 "/user/code",
                 "/user/login"
         ).order(1);//放行一部分功能
