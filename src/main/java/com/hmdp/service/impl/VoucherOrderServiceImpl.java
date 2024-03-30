@@ -63,7 +63,10 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
         //扣减库存
 
-        boolean isSC = seckillVoucherService.update().setSql("stock=stock-1").eq("voucher_id", voucherId).update();
+        boolean isSC = seckillVoucherService.update().setSql("stock=stock-1")
+                .eq("voucher_id", voucherId)
+                .gt("stock",0)//乐观锁判断库存是否大于0
+                .update();
         if(!isSC)
         {
 
