@@ -1,9 +1,13 @@
 package com.hmdp.utils;
 
 import cn.hutool.core.lang.UUID;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 
 import javax.annotation.Resource;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 public class SimpleRedisLock implements Ilock{
@@ -13,6 +17,13 @@ public class SimpleRedisLock implements Ilock{
     private static final String KEY_PREFIX ="lock:";
     private static final String ID_PREFIX= UUID.randomUUID().toString(true)+"_";
 
+    private static final DefaultRedisScript<Long> UNLOCK_SCRIPT;
+
+    static {
+        UNLOCK_SCRIPT=new DefaultRedisScript<>();
+        UNLOCK_SCRIPT.setLocation(new ClassPathResource("unlock.lua"));
+        UNLOCK_SCRIPT.setResultType(Long.class);
+    }
     public SimpleRedisLock(StringRedisTemplate stringRedisTemplate, String name) {
         this.stringRedisTemplate = stringRedisTemplate;
         this.name = name;
@@ -38,7 +49,7 @@ public class SimpleRedisLock implements Ilock{
     public void unlock() {
 
 
-        String key=KEY_PREFIX+name;
+        /*String key=KEY_PREFIX+name;
         long threadId = Thread.currentThread().getId();
         String threadIC=ID_PREFIX+threadId;
         //锁中标示
@@ -48,6 +59,10 @@ public class SimpleRedisLock implements Ilock{
         if (ti.equals(threadIC)) {
             stringRedisTemplate.delete(KEY_PREFIX + name);
 
-        }
+        }*/
+
+        //调用lua脚本
+        stringRedisTemplate.execute(UNLOCK_SCRIPT, Collections.singletonList(KEY_PREFIX+name),ID_PREFIX+Thread.currentThread().getId());
+
     }
 }
