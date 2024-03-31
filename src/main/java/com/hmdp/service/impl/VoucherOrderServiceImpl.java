@@ -8,8 +8,11 @@ import com.hmdp.service.ISeckillVoucherService;
 import com.hmdp.service.IVoucherOrderService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisIdWorker;
+import com.hmdp.utils.SimpleRedisLock;
 import com.hmdp.utils.UserHolder;
 import org.springframework.aop.framework.AopContext;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +30,8 @@ import java.time.LocalDateTime;
 @Service
 public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, VoucherOrder> implements IVoucherOrderService {
 
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
     @Resource
     private ISeckillVoucherService seckillVoucherService;
 
@@ -65,7 +70,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
         Long userid = UserHolder.getUser().getId();
 
-        //给不同用户加锁，先获取锁，再修改数据库，再进行事物提交完成修改，最后释放锁，确保线程安全，但要注意确保spring事物生效（目标对象与代理对象）从而确保事物安全
+        /*//给不同用户加锁，先获取锁，再修改数据库，再进行事物提交完成修改，最后释放锁，确保线程安全，但要注意确保spring事物生效（目标对象与代理对象）从而确保事物安全
         synchronized (userid.toString().intern()) {
 
             //获取代理对象
@@ -73,7 +78,31 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             //返回订单
             return proxy.createVoucher(voucherId);
 
+        }*/
+
+        //创建锁对象，获取锁
+        SimpleRedisLock simpleRedisLock = new SimpleRedisLock(stringRedisTemplate, "order" + userid);
+
+        boolean islock = simpleRedisLock.tryLock(1200);
+        if(!islock)
+        {
+
+            //获取失败
+            return Result.fail("一人只允许下一单！");
+
         }
+        //获取代理对象
+        IVoucherOrderService proxy = null;
+        try {
+            proxy = (IVoucherOrderService) AopContext.currentProxy();
+            //返回订单
+            return proxy.createVoucher(voucherId);
+        }
+        finally {
+            simpleRedisLock.unlock();
+        }
+
+
     }
 
     @Transactional//订单和优惠券两张表
