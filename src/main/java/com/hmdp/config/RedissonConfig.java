@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Configuration;
 public class RedissonConfig {
 
     @Bean
-
     public RedissonClient redissonClient()
     {
         //配置

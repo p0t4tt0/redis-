@@ -68,7 +68,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
         log.debug("发送短信验证码成功：{}",validcode);
 
-        return Result.ok();
+        return Result.ok(validcode);
     }
 
     /**
@@ -82,6 +82,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         //校验手机号
 
 
+        log.info("登录");
         String phone = loginForm.getPhone();
         if (RegexUtils.isPhoneInvalid(phone)) {
             //不符合，返回错误信息
