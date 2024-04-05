@@ -2,6 +2,8 @@
 local vorcherId=ARGV[1]
 --用户id
 local userId=ARGV[2]
+--订单id
+local orderId=ARGV[3]
 
 --数据key
 --库存key
@@ -25,4 +27,8 @@ end
 
 redis.call('incrby',stockkey,-1)
 redis.call('sadd',orderkey,userId)
+
+--发送消息到队列中
+redis.call('xadd','stream.orders','*','userId',userId,'voucherId',vorcherId,'id',orderId)
+
 return 0
