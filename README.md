@@ -78,4 +78,4 @@
 
 ## redis哨兵sentinal
 ## sentinal是redis主从集群外的一组哨兵节点，主要负责监控整个redis集群的健康，并且在redis master宕机后，从slave中选择一个节点成为新master，防止无法按处理写请求，最后返回新主从地址给客户端
-## 其监控作用的实现是通过心跳机制，每秒向集群内实例发送ping如果超过一定时间未收到pong则该sentinal认为该实例主观下线，若超过一半sentinal认为主观下线，则判定该实例为客观下线，从而执行故障恢复，sentinal会从slave中选择offset最大，id最小，slave优先级最小的节点成为主节点，并发送slave of no one命令，同时向所有其他节点发送slave of命令选该节点为master，当原master醒来后在更换回去
+## 其监控作用的实现是通过心跳机制，每秒向集群内实例发送ping如果超过一定时间未收到pong则该sentinal认为该实例主观下线，若超过一半sentinal认为主观下线，则判定该实例为客观下线，从而执行故障恢复，sentinal会从slave中选择offset最大，id最小，slave优先级最小的节点成为主节点，并发送slave of no one命令，同时向所有其他节点发送slave of命令选该节点为master，当原master醒来后就变成了新的slave
