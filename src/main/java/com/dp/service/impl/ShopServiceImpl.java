@@ -9,10 +9,9 @@ import com.dp.entity.Shop;
 import com.dp.mapper.ShopMapper;
 import com.dp.service.IShopService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.dp.utils.CacheClient;
-import com.dp.utils.RedisConstants;
-import com.dp.utils.RedisData;
-import com.dp.utils.SystemConstants;
+import com.dp.utils.*;
+import org.redisson.api.RBloomFilter;
+import org.redisson.api.RedissonClient;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResult;
 import org.springframework.data.geo.GeoResults;
@@ -22,6 +21,7 @@ import org.springframework.data.redis.domain.geo.GeoReference;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -46,12 +46,41 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     @Resource
     private CacheClient cacheClient;
 
+    /** 预计插入的数据 */
+    private static Integer expectedInsertions = 10000;
+    /** 误判率 */
+    private static Double fpp = 0.01;
+
+    private RBloomFilter<Long> bloomFilter = null;
+
+    @Resource
+    private BloomFilterUtil bloomFilterUtil;
+
+    @Resource
+    private RedissonClient redissonClient;
+
+
+
+    @PostConstruct // 项目启动的时候执行该方法，也可以理解为在spring容器初始化的时候执行该方法
+    public void init() {
+
+        List<Shop> list = this.list();
+
+        bloomFilter=bloomFilterUtil.create("shopIdWhiteList",expectedInsertions,fpp);
+        for (Shop shop : list) {
+            bloomFilter.add(shop.getId());
+
+        }
+
+
+
+    }
+
     /**
      * 查询商户信息
      * @param id
      * @return
      */
-
     public Object queryById(Long id) {
        //缓存穿透
        // Shop shop = queryWithPassThrough(id);
@@ -65,6 +94,13 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
         //使用工具类解决缓存穿透
        // Shop shop=cacheClient.queryWithPassThrough(CACHE_SHOP_KEY,id,Shop.class,this::getById,CACHE_SHOP_TTL,TimeUnit.MINUTES);
+
+        //布隆过滤器判断是否存在
+        if(!bloomFilter.contains(id))
+        {
+
+            return null;
+        }
 
         Shop shop=cacheClient.queryWithLogicalExpire(CACHE_SHOP_KEY,id,Shop.class,this::getById,20L,TimeUnit.MINUTES);
 
@@ -241,6 +277,8 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
         //模拟延迟
         Thread.sleep(200);
+        //保存到布隆过滤器
+        bloomFilter.add(id);
 
         //封装逻辑过期时间
 
